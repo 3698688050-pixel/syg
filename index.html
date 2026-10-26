@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GLB 在线预览</title>
+  <script type="module"
+    src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #1a1a1a;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      background: #1a1a1a;
+      --poster-color: transparent;
+    }
+    #panel {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      z-index: 10;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+    }
+    #panel input[type="file"] { display: none; }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #4f8cff;
+      color: #fff;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn:hover { background: #3a74e0; }
+    .btn.secondary { background: rgba(255, 255, 255, 0.15); }
+    .btn.secondary:hover { background: rgba(255, 255, 255, 0.25); }
+    #filename {
+      opacity: 0.8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 50%;
+    }
+    #hint {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: #aaa;
+      pointer-events: none;
+    }
+    #hint h1 { color: #fff; font-size: 20px; margin: 0 0 8px; }
+    #hint p { margin: 0; font-size: 14px; }
+    #drop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      background: rgba(79, 140, 255, 0.25);
+      border: 3px dashed #4f8cff;
+      color: #fff;
+      font-size: 22px;
+    }
+    #drop.show { display: flex; }
+  </style>
+</head>
+<body>
+  <model-viewer
+    id="viewer"
+    camera-controls
+    auto-rotate
+    ar
+    shadow-intensity="1"
+    environment-image="neutral"
+    exposure="1"
+    touch-action="pan-y"
+  ></model-viewer>
+
+  <div id="panel">
+    <button class="btn" id="pickBtn">选择 GLB 文件</button>
+    <input type="file" id="file" accept=".glb,model/gltf-binary" />
+    <button class="btn secondary" id="resetBtn">重置</button>
+    <span id="filename"></span>
+  </div>
+
+  <div id="hint">
+    <h1>拖入 .glb 文件，或点击“选择 GLB 文件”</h1>
+    <p>文件只在你本地浏览器预览，不会上传到服务器</p>
+  </div>
+
+  <div id="drop">松开鼠标加载模型</div>
+
+  <script>
+    const viewer = document.getElementById("viewer");
+    const fileInput = document.getElementById("file");
+    const pickBtn = document.getElementById("pickBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const filename = document.getElementById("filename");
+    const hint = document.getElementById("hint");
+    const drop = document.getElementById("drop");
+
+    let currentUrl = null;
+
+    function loadFile(file) {
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith(".glb")) {
+        alert("请选择 .glb 文件");
+        return;
+      }
+      if (currentUrl) URL.revokeObjectURL(currentUrl);
+      currentUrl = URL.createObjectURL(file);
+      viewer.src = currentUrl;
+      filename.textContent = file.name;
+      hint.style.display = "none";
+    }
+
+    pickBtn.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => loadFile(fileInput.files[0]));
+
+    resetBtn.addEventListener("click", () => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+        currentUrl = null;
+      }
+      viewer.removeAttribute("src");
+      filename.textContent = "";
+      fileInput.value = "";
+      hint.style.display = "flex";
+    });
+
+    let dragCount = 0;
+    window.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      dragCount++;
+      drop.classList.add("show");
+    });
+    window.addEventListener("dragover", (e) => e.preventDefault());
+    window.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      dragCount--;
+      if (dragCount <= 0) {
+        dragCount = 0;
+        drop.classList.remove("show");
+      }
+    });
+    window.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dragCount = 0;
+      drop.classList.remove("show");
+      const file = e.dataTransfer.files[0];
+      if (file) loadFile(file);
+    });
+  </script>
+</body>
+</html>
